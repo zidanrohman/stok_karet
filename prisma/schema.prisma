@@ -17,8 +17,14 @@ model Product {
     sku       String          @unique
     name      String  
     stock     Int             @default(0)
+    unit      String          @default("pcs")
+    minStock  Int             @default(10) @map("min_stock")
     createdAt DateTime        @default(now()) @map("created_at")
+
     movements StockMovement[]
+
+    categoryId String?        @map("category_id") @db.Uuid
+    Category   Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
     @@map("products")
 }
@@ -33,4 +39,13 @@ model StockMovement {
     createdAt DateTime        @default(now()) @map("created_at")
 
     @@map("stock_movements")
+}
+
+model Category {
+    id          String      @id @default(uuid()) @db.Uuid
+    name        String      @unique
+    product     Product[]
+    createdAt   DateTime    @default(now()) @map("created_at")
+
+    @@map("categories")
 }
