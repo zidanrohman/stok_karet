@@ -3,8 +3,11 @@ import {prisma} from '@/lib/prisma'
 import { Prisma } from '@/generated/prisma/client'
 
 const productInput = z.object({
-    sku: z.string().min(1),
-    name: z.string().min(1)
+    sku: z.string().trim().min(1),
+    name: z.string().trim().min(1),
+    unit: z.string().trim().min(1).default('pcs'),
+    minStock: z.number().int().min(0).default(10),
+    categoryId: z.uuid().optional()
 })
 
 
@@ -50,7 +53,6 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
     const body = await req.json().catch(() => null)
     const parsed = productInput.safeParse(body)
-    console.log(body)
 
     if(!parsed.success){
         const errors = z.flattenError(parsed.error)
@@ -58,12 +60,24 @@ export async function POST(req: Request) {
     }
 
     try {
-        const created = await prisma.product.create({data: parsed.data})
+        
+
+        const created = await prisma.product.create({data: {
+            sku: parsed.data.sku,
+            name: parsed.data.name,
+            categoryId: parsed.data.categoryId
+        }})
         return Response.json(created, {status: 201})
     } catch (e) {
         if((e as {code?: string}).code === "P2002"){
             return Response.json({error: "SKU sudah dipakai"}, {status: 409})
-        }
+            }
+        if((e as {code?: string}).code === "P2003"){
+            return Response.json({error: "Kategori tidak ditemukan"}, {status: 400})
+            }
+        if((e as {code?: string}).code === "P2025"){
+            return Response.json({error: "Delete Or Update gagal"}, {status: 404})
+            }
         console.log(e)
         return Response.json({
             error: "Terjadi kesalah di server"
